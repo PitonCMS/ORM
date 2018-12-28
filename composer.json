@@ -1,0 +1,22 @@
+{
+    "name": "pitoncms/orm",
+    "description": "Manage persistent application data",
+    "type": "library",
+    "license": "MIT",
+    "homepage": "https://github.com/pitoncms/orm",
+    "keywords": ["data","database","persist","storage","orm","datamapper"],
+    "authors": [
+        {
+            "name": "Wolfgang Moritz",
+            "email": "wolfmoritz@gmail.com"
+        }
+    ],
+    "require": {
+        "php": ">=5.4"
+        },
+    "autoload": {
+        "psr-4": {
+            "Piton\\ORM\\": "src"
+        }
+    }
+}
