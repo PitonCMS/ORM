@@ -51,7 +51,7 @@ abstract class DataMapperAbstract
      * Domain Object Class
      * @var String
      */
-    protected $domainObjectClass = 'DomainObject';
+    protected $domainObjectClass = __NAMESPACE__ . '\DomainObject';
 
     /**
      * Does this table have created_by, created_date, updated_by, and updated_date?
@@ -150,7 +150,7 @@ abstract class DataMapperAbstract
      */
     public function make()
     {
-        $fullyQualifedClassName = __NAMESPACE__ . '\\' . $this->domainObjectClass;
+        $fullyQualifedClassName = $this->domainObjectClass;
 
         return new $fullyQualifedClassName;
     }
@@ -554,7 +554,7 @@ abstract class DataMapperAbstract
         // If a select statement was executed, set fetch mode
         if (stristr($this->sql, 'select')) {
             if ($this->fetchMode === PDO::FETCH_CLASS) {
-                $this->statement->setFetchMode($this->fetchMode, __NAMESPACE__ . '\\' . $this->domainObjectClass);
+                $this->statement->setFetchMode($this->fetchMode, $this->domainObjectClass);
             } else {
                 $this->statement->setFetchMode($this->fetchMode);
             }
