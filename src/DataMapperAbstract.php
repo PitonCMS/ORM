@@ -166,7 +166,7 @@ abstract class DataMapperAbstract
         // Use default select statement and add where clause, unless other SQL has been supplied
         if (empty($this->sql)) {
             $this->makeSelect();
-            $this->sql .= ' where ';
+            $this->sql .= ' and ';
             $this->sql .= ($this->tableAlias) ?: $this->table;
             $this->sql .= '.' . $this->primaryKey . ' = ?';
         }
@@ -199,14 +199,14 @@ abstract class DataMapperAbstract
      * Find Table Rows
      *
      * Returns all matching table rows.
-     * @param  void
+     * @param  bool $foundRows Set to true to get foundRows() after query
      * @return mixed Array of DomainObject | null
      */
-    public function find()
+    public function find($foundRows = false)
     {
         // Use default select statement unless other SQL has been supplied
         if (!$this->sql) {
-            $this->makeSelect();
+            $this->makeSelect($foundRows);
         }
 
         // Execute the query
@@ -218,7 +218,7 @@ abstract class DataMapperAbstract
     /**
      * Count Found Rows
      *
-     * Returns the total number of rows for the last query if SQL_CALC_FOUND_ROWS is included
+     * Returns the total number of rows for the last query if SQL_CALC_FOUND_ROWS was set
      * @param  void
      * @return int
      */
@@ -230,7 +230,7 @@ abstract class DataMapperAbstract
     /**
      * Save Domain Object
      *
-     * Define in child class to add any manipulation before coreSave()
+     * Define in child class to add any manipulation before calling parent::coreSave()
      * @param  DomainObject $domainObject
      * @return mixed                      DomainObject | null
      */
@@ -242,7 +242,7 @@ abstract class DataMapperAbstract
     /**
      * Update a Record
      *
-     * Define in child class to add any manipulation before coreUpdate()
+     * Define in child class to add any manipulation before calling parent::coreUpdate()
      * @param  DomainObject $domainObject
      * @return mixed                      DomainObject | null
      */
@@ -254,7 +254,7 @@ abstract class DataMapperAbstract
     /**
      * Insert a Record
      *
-     * Define in child class to add any manipulation before coreInsert()
+     * Define in child class to add any manipulation before calling parent::coreInsert()
      * @param  DomainObject $domainObject
      * @param  bool                       If true, update on duplicate record
      * @return mixed                      DomainObject | null
@@ -267,7 +267,7 @@ abstract class DataMapperAbstract
     /**
      * Delete a Record
      *
-     * Define in child class to override behavior
+     * Define in child class to override behavior before calling parent::coreDelete()
      * @param  DomainObject $domainObject
      * @return bool                       true | null
      */
@@ -486,6 +486,7 @@ abstract class DataMapperAbstract
             $this->sql .= $foundRows ? 'SQL_CALC_FOUND_ROWS ' : '';
             $this->sql .= ($this->tableAlias) ?: $this->table;
             $this->sql .= '.* from ' . $this->table . ' ' . $this->tableAlias;
+            $this->sql .= ' where 1=1';
         }
     }
 
