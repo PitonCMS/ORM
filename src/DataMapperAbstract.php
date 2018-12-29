@@ -351,7 +351,7 @@ abstract class DataMapperAbstract
         if ($hasBeenSet === 0) {
             // No, log and return
             if ($this->logger) {
-                $this->logger->debug('Nothing to update');
+                $this->logger->debug('Piton ORM: Nothing to update');
             }
 
             return null;
@@ -412,7 +412,7 @@ abstract class DataMapperAbstract
         if ($hasBeenSet === 0) {
             // No, log and return
             if ($this->logger) {
-                $this->logger->debug('Nothing to insert');
+                $this->logger->debug('PitonORM: Nothing to insert');
             }
 
             return null;
@@ -517,8 +517,8 @@ abstract class DataMapperAbstract
     {
         // Log query and binds
         if ($this->logger) {
-            $this->logger->debug('SQL: ' . $this->sql);
-            $this->logger->debug('SQL Binds: ' . print_r($this->bindValues, true));
+            $this->logger->debug('PitonORM: SQL: ' . $this->sql);
+            $this->logger->debug('PitonORM: SQL Binds: ' . print_r($this->bindValues, true));
         }
 
         // Prepare the query
@@ -543,9 +543,9 @@ abstract class DataMapperAbstract
         if (false === $outcome = $this->statement->execute()) {
             // If false is returned there was a problem
             if ($this->logger) {
-                $this->logger->error('PDO Execute Returned False: ' . $this->sql);
-                $this->logger->error('PDO SQL Binds: ' . print_r($this->bindValues, true));
-                $this->logger->error('PDO errorInfo: ' . print_r($this->statement->errorInfo(), true));
+                $this->logger->error('PitonORM: PDO Execute Returned False: ' . $this->sql);
+                $this->logger->error('PitonORM: PDO SQL Binds: ' . print_r($this->bindValues, true));
+                $this->logger->error('PitonORM: PDO errorInfo: ' . print_r($this->statement->errorInfo(), true));
             }
 
             return null;
