@@ -365,6 +365,10 @@ abstract class DataMapperAbstract
             $this->sql .= ', updated_by = ?, updated_date = ? ';
             $this->bindValues[] = $this->sessionUserId;
             $this->bindValues[] = $this->now();
+
+            // Set domain object properties for reference on return
+            $domainObject->updated_by = $this->sessionUserId;
+            $domainObject->updated_date = $this->now();
         }
 
         // Append where clause
@@ -429,6 +433,12 @@ abstract class DataMapperAbstract
             $this->bindValues[] = $this->now();
             $this->bindValues[] = $this->sessionUserId;
             $this->bindValues[] = $this->now();
+
+            // Set domain object properties for reference on return
+            $domainObject->created_by = $this->sessionUserId;
+            $domainObject->created_date = $this->now();
+            $domainObject->updated_by = $this->sessionUserId;
+            $domainObject->updated_date = $this->now();
         }
 
         // Close and concatenate strings
