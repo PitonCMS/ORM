@@ -2,7 +2,7 @@
 /**
  * PitonCMS (https://github.com/PitonCMS)
  *
- * @link      https://github.com/PitonCMS
+ * @link      https://github.com/PitonCMS/ORM
  * @copyright Copyright (c) 2015 - 2019 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
@@ -14,8 +14,7 @@ use \Exception;
 /**
  * Piton Abstract Data Mapper Class
  *
- * All domain data mapper classes should extend this class.
- * SQL statements return DomainObjects.
+ * All data mapper classes for tables should extend this class.
  */
 abstract class DataMapperAbstract
 {
@@ -107,31 +106,47 @@ abstract class DataMapperAbstract
     protected $statement;
 
     /**
+     * Now 'Y-m-d H:i:s'
+     * @var String
+     */
+    protected $now;
+
+    /**
+     * Today 'Y-m-d'
+     * @var String
+     */
+    protected $today;
+
+    /**
      * Construct
      *
      * Only PDO supported for now
-     * @param object $dbConnection Database connection: PDO
-     * @param array  $settings     Optional array of settings
+     * Optional settings:
+     * - sessionUserId: Application session user ID to set in created by and updated by fields
+     * - logger: Logging object
+     * @param  object $dbConnection Database connection: PDO
+     * @param  array  $options      Optional array of setting options
+     * @return void
      */
-    public function __construct($dbConnection, array $settings = [])
+    public function __construct($dbConnection, array $options = [])
     {
         if ($dbConnection instanceof PDO) {
             $this->dbh = $dbConnection;
         } else {
-            throw new Exception("Invalid database connection provided, expected PDO", 1);
+            throw new Exception("Invalid database connection provided, expected PDO");
         }
 
-        if (!empty($settings)) {
-            $this->logger = (array_key_exists('logger', $settings)) ? $settings['logger'] : null;
-            $this->sessionUserId = (array_key_exists('user_id', $settings)) ? $settings['user_id'] : null;
-        }
+        $this->now = date('Y-m-d H:i:s');
+        $this->today = date('Y-m-d');
+        $this->setConfig($options);
     }
 
     /**
-     * Create a new Domain Object
+     * Create a new Domain Value Object
      *
      * Uses the $domainObjectClass defined in the child class
-     * @return Object
+     * @param  void
+     * @return DomainObject
      */
     public function make()
     {
@@ -141,10 +156,10 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Get one table row by the primary key ID
+     * Find one table row using the primary key ID
      *
-     * @param $id, primary key ID
-     * @return mixed, Domain Object if found, null otherwise
+     * @param  int   $id Primary key ID
+     * @return mixed     DomainObject | null
      */
     public function findById($id)
     {
@@ -165,11 +180,11 @@ abstract class DataMapperAbstract
      * Find Single Record
      *
      * Use if the SQL is expecting one row
-     * @return array
+     * @param  void
+     * @return mixed DomainObject | null
      */
     public function findRow()
     {
-        // If no SQL was provided, return null
         if (!$this->sql) {
             $this->makeSelect();
         }
@@ -181,12 +196,11 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Get Table Rows
+     * Find Table Rows
      *
-     * Returns all table rows, or if a custom SQL is set then returns matching rows
-     *
-     * Returns an array of Domain Objects (one for each record)
-     * @return Array
+     * Returns all matching table rows.
+     * @param  void
+     * @return mixed Array of DomainObject | null
      */
     public function find()
     {
@@ -205,6 +219,8 @@ abstract class DataMapperAbstract
      * Count Found Rows
      *
      * Returns the total number of rows for the last query if SQL_CALC_FOUND_ROWS is included
+     * @param  void
+     * @return int
      */
     public function foundRows()
     {
@@ -212,11 +228,11 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Save Domain Object (Public)
+     * Save Domain Object
      *
      * Define in child class to add any manipulation before coreSave()
-     * @param Domain Object
-     * @return mixed, Domain Object on success, false otherwise
+     * @param  DomainObject $domainObject
+     * @return mixed                      DomainObject | null
      */
     public function save(DomainObject $domainObject)
     {
@@ -224,11 +240,11 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Update a Record (Public)
+     * Update a Record
      *
      * Define in child class to add any manipulation before coreUpdate()
-     * @param Domain Object
-     * @return Domain Object
+     * @param  DomainObject $domainObject
+     * @return mixed                      DomainObject | null
      */
     public function update(DomainObject $domainObject)
     {
@@ -236,23 +252,24 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Insert a Record (Public)
+     * Insert a Record
      *
      * Define in child class to add any manipulation before coreInsert()
-     * @param Domain Object
-     * @return Domain Object
+     * @param  DomainObject $domainObject
+     * @param  bool                       If true, update on duplicate record
+     * @return mixed                      DomainObject | null
      */
-    public function insert(DomainObject $domainObject)
+    public function insert(DomainObject $domainObject, $ignore = false)
     {
-        return $this->coreInsert($domainObject);
+        return $this->coreInsert($domainObject, $ignore);
     }
 
     /**
-     * Delete a Record (Public)
+     * Delete a Record
      *
      * Define in child class to override behavior
-     * @param Domain Object
-     * @return Boolean
+     * @param  DomainObject $domainObject
+     * @return bool                       true | null
      */
     public function delete(DomainObject $domainObject)
     {
@@ -263,22 +280,24 @@ abstract class DataMapperAbstract
      * Current Date Time
      *
      * Returns datetime string in MySQL Format
+     * @param  void
      * @return string
      */
     public function now()
     {
-        return date('Y-m-d H:i:s');
+        return $this->now;
     }
 
     /**
      * Current Date
      *
      * Returns date string in MySQL Format
+     * @param  void
      * @return string
      */
     public function today()
     {
-        return date('Y-m-d');
+        return $this->today;
     }
 
     // ------------------------------------------------------------------------
@@ -286,11 +305,11 @@ abstract class DataMapperAbstract
     // ------------------------------------------------------------------------
 
     /**
-     * Save Domain Object (Protected)
+     * Save Domain Object
      *
      * Inserts or updates Domain Object record
-     * @param Domain Object
-     * @return mixed, Domain Object on success, false otherwise
+     * @param  DomainObject $domainObject
+     * @return mixed                      DomainObject | null
      */
     protected function coreSave(DomainObject $domainObject)
     {
@@ -302,11 +321,11 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Update a Record (Protected)
+     * Update a Record
      *
      * Updates a single record using the primarky key ID
-     * @param Domain Object
-     * @return Domain Object
+     * @param  DomainObject $domainObject
+     * @return mixed                      DomainObject | null
      */
     protected function coreUpdate(DomainObject $domainObject)
     {
@@ -359,11 +378,11 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Insert a New Record (Protected)
+     * Insert a New Record
      *
-     * @param DomainObject
-     * @param bool, Include IGNORE syntax
-     * @return Domain Object
+     * @param  DomainObject $domainObject
+     * @param  bool         $ignore If true, update on duplicate record
+     * @return mixed        DomainObject | null
      */
     protected function coreInsert(DomainObject $domainObject, $ignore = false)
     {
@@ -423,10 +442,10 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Delete a Record (Protected)
+     * Delete a Record
      *
-     * @param Domain Object
-     * @return Boolean
+     * @param  DomainObject $domainObject
+     * @return bool         true | null
      */
     protected function coreDelete(DomainObject $domainObject)
     {
@@ -447,8 +466,8 @@ abstract class DataMapperAbstract
      * Make Default Select
      *
      * Make select statement if $this->sql is not set
-     * @param  bool $foundRows False. Set to true to get total found rows after query
-     * @return none
+     * @param  bool $foundRows Set to true to get foundRows() after query
+     * @return void
      */
     protected function makeSelect($foundRows = false)
     {
@@ -465,6 +484,7 @@ abstract class DataMapperAbstract
      *
      * Resets $sql, $bindValues, and $fetchMode
      * Called after executing prior statement
+     * @param  void
      * @return void
      */
     protected function clear()
@@ -479,13 +499,14 @@ abstract class DataMapperAbstract
      *
      * Executes $this->sql string using $this->bindValues array
      * Returns true/false for DML, and query result array for selects
-     * @return mixed
+     * @param  void
+     * @return mixed true | null
      */
     protected function execute()
     {
         // Log query and binds
         if ($this->logger) {
-            $this->logger->debug('SQL Statement: ' . $this->sql);
+            $this->logger->debug('SQL: ' . $this->sql);
             $this->logger->debug('SQL Binds: ' . print_r($this->bindValues, true));
         }
 
@@ -509,10 +530,11 @@ abstract class DataMapperAbstract
 
         // Execute the query
         if (false === $outcome = $this->statement->execute()) {
-            // If false is returned there was a problem so log it
+            // If false is returned there was a problem
             if ($this->logger) {
-                $this->logger->error('PDO Execute Returns False: ' . $this->sql);
+                $this->logger->error('PDO Execute Returned False: ' . $this->sql);
                 $this->logger->error('PDO SQL Binds: ' . print_r($this->bindValues, true));
+                $this->logger->error('PDO errorInfo: ' . print_r($this->statement->errorInfo(), true));
             }
 
             return null;
@@ -537,13 +559,17 @@ abstract class DataMapperAbstract
      * Define Table Definition
      *
      * Set table configurations
-     * @param array $table Table definition
+     * @param  array $table Table definition
      * @return void
      */
     protected function define($table)
     {
         // Required, table name
-        $this->table = $table['table'];
+        if (isset($table['table'])) {
+            $this->table = $table['table'];
+        } else {
+            throw new Exception("Option 'table' name must be defined.");
+        }
 
         // Optional
         if (isset($table['tableAlias'])) {
@@ -573,6 +599,32 @@ abstract class DataMapperAbstract
             $this->who = $table['who'];
         } else {
             throw new Exception("The the Who column flag must be TRUE or FALSE");
+        }
+    }
+
+    /**
+     * Set Configuration
+     *
+     * Set DataMapper configuration options.
+     * @param  array $options Array of configuration options
+     * @return void
+     */
+    private function setConfig($options)
+    {
+        if (empty($options)) {
+            return;
+        }
+
+        if (isset($options['logger'])) {
+            if (is_object($options['logger'])) {
+                $this->logger = $options['logger'];
+            } else {
+                throw new Exception("Option 'logger' must be a logging object");
+            }
+        }
+
+        if (isset($options['sessionUserId'])) {
+            $this->sessionUserId = $options['sessionUserId'];
         }
     }
 }

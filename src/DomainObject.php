@@ -2,7 +2,7 @@
 /**
  * PitonCMS (https://github.com/PitonCMS)
  *
- * @link      https://github.com/PitonCMS
+ * @link      https://github.com/PitonCMS/ORM
  * @copyright Copyright (c) 2015 - 2019 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
@@ -27,6 +27,8 @@ class DomainObject
      * Get Object Property
      *
      * Applies only to private and protected properties
+     * @param  mixed $key Property name to get
+     * @return mixed      Property value | null
      */
     public function __get($key)
     {
@@ -37,6 +39,9 @@ class DomainObject
      * Set Object Property
      *
      * Applies only to private and protected properties
+     * @param  str $key Property key
+     * @param  mixed    Property value to set
+     * @return void
      */
     public function __set($key, $value)
     {
