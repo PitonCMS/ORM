@@ -338,23 +338,11 @@ abstract class DataMapperAbstract
         $this->sql = 'update ' . $this->table . ' set ';
 
         // Use set object properties which match the list of updatable columns
-        $hasBeenSet = 0;
         foreach ($this->modifiableColumns as $column) {
-            if (isset($domainObject->$column)) {
+            if (property_exists($domainObject, $column)) {
                 $this->sql .= $column . ' = ?, ';
                 $this->bindValues[] = $domainObject->$column;
-                $hasBeenSet++;
             }
-        }
-
-        // Is there anything to actually update?
-        if ($hasBeenSet === 0) {
-            // No, log and return
-            if ($this->logger) {
-                $this->logger->debug('Piton ORM: Nothing to update');
-            }
-
-            return null;
         }
 
         // Remove last comma at end of SQL string
@@ -364,11 +352,11 @@ abstract class DataMapperAbstract
         if ($this->who) {
             $this->sql .= ', updated_by = ?, updated_date = ? ';
             $this->bindValues[] = $this->sessionUserId;
-            $this->bindValues[] = $this->now();
+            $this->bindValues[] = $this->now;
 
             // Set domain object properties for reference on return
             $domainObject->updated_by = $this->sessionUserId;
-            $domainObject->updated_date = $this->now();
+            $domainObject->updated_date = $this->now;
         }
 
         // Append where clause
@@ -398,24 +386,14 @@ abstract class DataMapperAbstract
         // Insert values placeholder string
         $insertValues = ' ';
 
-        $hasBeenSet = 0;
+        // Use set object properties which match the list of updatable columns
         foreach ($this->modifiableColumns as $column) {
-            if (isset($domainObject->$column)) {
+            if (property_exists($domainObject, $column)) {
                 $this->sql .= $column . ', ';
                 $insertValues .= '?, ';
                 $this->bindValues[] = $domainObject->$column;
-                $hasBeenSet++;
+                // $hasBeenSet++;
             }
-        }
-
-        // Is there anything to actually insert?
-        if ($hasBeenSet === 0) {
-            // No, log and return
-            if ($this->logger) {
-                $this->logger->debug('PitonORM: Nothing to insert');
-            }
-
-            return null;
         }
 
         // Remove trailing commas
@@ -430,15 +408,15 @@ abstract class DataMapperAbstract
 
             // Add binds
             $this->bindValues[] = $this->sessionUserId;
-            $this->bindValues[] = $this->now();
+            $this->bindValues[] = $this->now;
             $this->bindValues[] = $this->sessionUserId;
-            $this->bindValues[] = $this->now();
+            $this->bindValues[] = $this->now;
 
             // Set domain object properties for reference on return
             $domainObject->created_by = $this->sessionUserId;
-            $domainObject->created_date = $this->now();
+            $domainObject->created_date = $this->now;
             $domainObject->updated_by = $this->sessionUserId;
-            $domainObject->updated_date = $this->now();
+            $domainObject->updated_date = $this->now;
         }
 
         // Close and concatenate strings
@@ -529,8 +507,7 @@ abstract class DataMapperAbstract
             // Determine data type
             if (is_int($value)) {
                 $paramType = PDO::PARAM_INT;
-            } elseif ($value === '') {
-                $value = null;
+            } elseif ($value === null) {
                 $paramType = PDO::PARAM_NULL;
             } else {
                 $paramType = PDO::PARAM_STR;
