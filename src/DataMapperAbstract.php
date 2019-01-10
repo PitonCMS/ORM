@@ -507,7 +507,7 @@ abstract class DataMapperAbstract
             // Determine data type
             if (is_int($value)) {
                 $paramType = PDO::PARAM_INT;
-            } elseif ($value === null) {
+            } elseif ($value === null || $value === '') {
                 $paramType = PDO::PARAM_NULL;
             } else {
                 $paramType = PDO::PARAM_STR;
