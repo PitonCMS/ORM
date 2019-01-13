@@ -460,7 +460,7 @@ abstract class DataMapperAbstract
     protected function makeSelect($foundRows = false)
     {
         if (!isset($this->sql)) {
-            $this->sql = 'select SQL_CALC_FOUND_ROWS ';
+            $this->sql = 'select ';
             $this->sql .= $foundRows ? 'SQL_CALC_FOUND_ROWS ' : '';
             $this->sql .= ($this->tableAlias) ?: $this->table;
             $this->sql .= '.* from ' . $this->table . ' ' . $this->tableAlias;
