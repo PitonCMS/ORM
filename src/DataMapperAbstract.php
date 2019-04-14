@@ -29,10 +29,20 @@ abstract class DataMapperAbstract
     protected $table;
 
     /**
-     * Table Alias, if needed
-     * @var String
+     * Table Joins
+     *   [
+     *      [
+     *          ['select'] => 'table2.col1, table2.col2, table2.col3..',
+     *          ['table'] => 'table2',
+     *          ['join'] => 'left outer join',
+     *          ['on'] => 'table.id = table2.table_id'
+     *      ], [
+     *          // Other table joins
+     *      ]
+     *   ]
+     * @var array
      */
-    protected $tableAlias;
+    protected $tableJoins;
 
     /**
      * Primary Key Column Name
@@ -150,9 +160,7 @@ abstract class DataMapperAbstract
      */
     public function make()
     {
-        $fullyQualifedClassName = $this->domainObjectClass;
-
-        return new $fullyQualifedClassName;
+        return new $this->domainObjectClass;
     }
 
     /**
@@ -166,9 +174,7 @@ abstract class DataMapperAbstract
         // Use default select statement and add where clause, unless other SQL has been supplied
         if (empty($this->sql)) {
             $this->makeSelect();
-            $this->sql .= ' and ';
-            $this->sql .= ($this->tableAlias) ?: $this->table;
-            $this->sql .= '.' . $this->primaryKey . ' = ?';
+            $this->sql .= " and {$this->table}.{$this->primaryKey} = ?";
         }
 
         $this->bindValues[] = $id;
@@ -187,6 +193,7 @@ abstract class DataMapperAbstract
     {
         if (!$this->sql) {
             $this->makeSelect();
+            $this->sql .= ' limit 1';
         }
 
         // Execute the query & return
@@ -199,10 +206,10 @@ abstract class DataMapperAbstract
      * Find Table Rows
      *
      * Returns all matching table rows.
-     * @param  bool $foundRows Set to true to get foundRows() after query
-     * @return mixed Array of DomainObject | null
+     * @param  bool  $foundRows Set to true to get foundRows() after query
+     * @return mixed            Array of DomainObject | null
      */
-    public function find($foundRows = false)
+    public function find(bool $foundRows = false)
     {
         // Use default select statement unless other SQL has been supplied
         if (!$this->sql) {
@@ -224,7 +231,7 @@ abstract class DataMapperAbstract
      */
     public function foundRows()
     {
-        return $this->dbh->query('select found_rows()')->fetch(PDO::FETCH_COLUMN);
+        return (int) $this->dbh->query('select found_rows()')->fetch(PDO::FETCH_COLUMN);
     }
 
     /**
@@ -236,6 +243,11 @@ abstract class DataMapperAbstract
      */
     public function save(DomainObject $domainObject)
     {
+        // Do not allow multi table saves
+        if ($this->tableJoins) {
+            throw new Exception('PitonORM: Unable to save multi-table DataMappers');
+        }
+
         return $this->coreSave($domainObject);
     }
 
@@ -453,19 +465,36 @@ abstract class DataMapperAbstract
     /**
      * Make Default Select
      *
-     * Make select statement if $this->sql is not set
+     * Make select statement
+     * Overrides $this->sql.
+     * If $tableJoins is defined, selects all rows from base table plus joined rows
+     * prefixed with the joined table name.
      * @param  bool $foundRows Set to true to get foundRows() after query
      * @return void
      */
-    protected function makeSelect($foundRows = false)
+    protected function makeSelect(bool $foundRows = false)
     {
-        if (!isset($this->sql)) {
-            $this->sql = 'select ';
-            $this->sql .= $foundRows ? 'SQL_CALC_FOUND_ROWS ' : '';
-            $this->sql .= ($this->tableAlias) ?: $this->table;
-            $this->sql .= '.* from ' . $this->table . ' ' . $this->tableAlias;
-            $this->sql .= ' where 1=1';
+        $this->sql = 'select ';
+        $this->sql .= $foundRows ? 'SQL_CALC_FOUND_ROWS ' : '';
+        $this->sql .= $this->table . '.* ';
+
+        // Add joined tables to select if defined
+        if ($this->tableJoins ) {
+            array_walk($this->tableJoins, function ($join) {
+                $this->sql .= ', ' . $join['select'] . ' ';
+            });
         }
+
+        $this->sql .= 'from ' . $this->table . ' ';
+
+        // Add joined tables if defined
+        if ($this->tableJoins) {
+            array_walk($this->tableJoins, function ($join) {
+                $this->sql .= $join['join'] . ' ' . $join['table'] . ' on ' . $join['on'] . ' ';
+            });
+        }
+
+        $this->sql .= 'where 1=1 ';
     }
 
     /**
@@ -544,60 +573,13 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Define Table Definition
-     *
-     * Set table configurations
-     * @param  array $table Table definition
-     * @return void
-     */
-    protected function define($table)
-    {
-        // Required, table name
-        if (isset($table['table'])) {
-            $this->table = $table['table'];
-        } else {
-            throw new Exception("Option 'table' name must be defined.");
-        }
-
-        // Optional
-        if (isset($table['tableAlias'])) {
-            $this->tableAlias = $table['tableAlias'];
-        }
-
-        // Optional, update to match table name
-        if (isset($table['primaryKey'])) {
-            $this->primaryKey = $table['primaryKey'];
-        }
-
-        // Required, array of updatable or insertable columns
-        // Do not includ the who columns or primary key
-        if (isset($table['modifiableColumns']) && is_array($table['modifiableColumns'])) {
-            $modifiableColumns = $table['modifiableColumns'];
-        } else {
-            throw new Exception("modifiableColumns is required and must be an array of column names");
-        }
-
-        // Optional, name of custom value object class
-        if (isset($table['domainObjectClass'])) {
-            $this->domainObjectClass = $table['domainObjectClass'];
-        }
-
-        // Optional, set flag if table has created_by, created_date, updated_by, updated_date columns
-        if (isset($table['who']) && ($table['who'] === true || $table['who'] === false)) {
-            $this->who = $table['who'];
-        } else {
-            throw new Exception("The the Who column flag must be TRUE or FALSE");
-        }
-    }
-
-    /**
      * Set Configuration
      *
      * Set DataMapper configuration options.
      * @param  array $options Array of configuration options
      * @return void
      */
-    private function setConfig($options)
+    private function setConfig(array $options)
     {
         if (empty($options)) {
             return;
