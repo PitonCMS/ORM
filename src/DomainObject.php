@@ -17,7 +17,7 @@ namespace Piton\ORM;
 class DomainObject
 {
     /**
-     * This $id avoids an error when the __get() magic method in DomainObjectAbstract is called
+     * This $id avoids an error when the __get() magic method in DomainObject is called
      * on a non-existent property
      * @var int
      */
@@ -26,7 +26,6 @@ class DomainObject
     /**
      * Get Object Property
      *
-     * Applies only to private and protected properties
      * @param  mixed $key Property name to get
      * @return mixed      Property value | null
      */
@@ -38,9 +37,8 @@ class DomainObject
     /**
      * Set Object Property
      *
-     * Applies only to private and protected properties
-     * @param  str $key Property key
-     * @param  mixed    Property value to set
+     * @param  string $key   Property key
+     * @param  mixed  $value Property value to set
      * @return void
      */
     public function __set($key, $value)
