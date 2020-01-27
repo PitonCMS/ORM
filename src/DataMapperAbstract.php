@@ -198,7 +198,7 @@ abstract class DataMapperAbstract
      * Find Table Rows
      *
      * Returns all matching table rows.
-     * @param  bool  $foundRows Set to true to get foundRows() after query
+     * @param  bool $foundRows Set to true to get foundRows() after query
      * @return array|null
      */
     public function find(bool $foundRows = false): ?array
@@ -223,7 +223,7 @@ abstract class DataMapperAbstract
      * @param  void
      * @return int
      */
-    public function foundRows()
+    public function foundRows(): ?int
     {
         return (int) $this->dbh->query('select found_rows()')->fetch(PDO::FETCH_COLUMN);
     }
@@ -231,11 +231,11 @@ abstract class DataMapperAbstract
     /**
      * Save Domain Object
      *
-     * Define in child class to add any manipulation before calling parent::coreSave()
+     * Override in child class to add any manipulation before calling parent::coreSave()
      * @param  DomainObject $domainObject
-     * @return mixed                      DomainObject | null
+     * @return DomainObject|null
      */
-    public function save(DomainObject $domainObject)
+    public function save(DomainObject $domainObject): ?DomainObject
     {
         return $this->coreSave($domainObject);
     }
@@ -243,11 +243,11 @@ abstract class DataMapperAbstract
     /**
      * Update a Record
      *
-     * Define in child class to add any manipulation before calling parent::coreUpdate()
+     * Override in child class to add any manipulation before calling parent::coreUpdate()
      * @param  DomainObject $domainObject
-     * @return mixed                      DomainObject | null
+     * @return DomainObject|null
      */
-    public function update(DomainObject $domainObject)
+    public function update(DomainObject $domainObject): ?DomainObject
     {
         return $this->coreUpdate($domainObject);
     }
@@ -255,12 +255,12 @@ abstract class DataMapperAbstract
     /**
      * Insert a Record
      *
-     * Define in child class to add any manipulation before calling parent::coreInsert()
+     * Override in child class to add any manipulation before calling parent::coreInsert()
      * @param  DomainObject $domainObject
-     * @param  bool                       If true, update on duplicate record
-     * @return mixed                      DomainObject | null
+     * @param  bool         $ignore       If true, update on duplicate record
+     * @return DomainObject|null
      */
-    public function insert(DomainObject $domainObject, $ignore = false)
+    public function insert(DomainObject $domainObject, bool $ignore = false): ?DomainObject
     {
         return $this->coreInsert($domainObject, $ignore);
     }
@@ -268,11 +268,11 @@ abstract class DataMapperAbstract
     /**
      * Delete a Record
      *
-     * Define in child class to override behavior before calling parent::coreDelete()
+     * Override in child class to override behavior before calling parent::coreDelete()
      * @param  DomainObject $domainObject
-     * @return bool                       true | null
+     * @return bool
      */
-    public function delete(DomainObject $domainObject)
+    public function delete(DomainObject $domainObject): bool
     {
         return $this->coreDelete($domainObject);
     }
@@ -335,7 +335,7 @@ abstract class DataMapperAbstract
             throw new Exception('A primary key id was not provided to update the record.');
         }
 
-        // Get started
+        // Build SQL...
         $this->sql = 'update ' . $this->table . ' set ';
 
         // Use set object properties which match the list of updatable columns
@@ -381,7 +381,7 @@ abstract class DataMapperAbstract
      */
     protected function coreInsert(DomainObject $domainObject, bool $ignore = false): ?DomainObject
     {
-        // Get started
+        // Build SQL...
         $this->sql = 'insert ';
         $this->sql .= ($ignore) ? 'ignore ' : '';
         $this->sql .= 'into ' . $this->table . ' (';
@@ -472,7 +472,6 @@ abstract class DataMapperAbstract
      * Clear Prior SQL Statement
      *
      * Resets $sql, $bindValues, and $fetchMode
-     * Called after executing prior statement
      * @param  void
      * @return void
      */
