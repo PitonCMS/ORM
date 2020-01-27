@@ -1,4 +1,5 @@
 <?php
+
 /**
  * PitonCMS (https://github.com/PitonCMS)
  *
@@ -6,10 +7,13 @@
  * @copyright Copyright (c) 2015 - 2019 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
+
+declare(strict_types=1);
+
 namespace Piton\ORM;
 
-use \PDO;
-use \Exception;
+use PDO;
+use Exception;
 
 /**
  * Piton Abstract Data Mapper Class
@@ -24,48 +28,32 @@ abstract class DataMapperAbstract
 
     /**
      * Table Name
-     * @var String
+     * @var string
      */
     protected $table;
 
     /**
-     * Table Joins
-     *   [
-     *      [
-     *          ['select'] => 'table2.col1, table2.col2, table2.col3..',
-     *          ['table'] => 'table2',
-     *          ['join'] => 'left outer join',
-     *          ['on'] => 'table.id = table2.table_id'
-     *      ], [
-     *          // Other table joins
-     *      ]
-     *   ]
-     * @var array
-     */
-    protected $tableJoins;
-
-    /**
      * Primary Key Column Name
      * Define if not 'id'
-     * @var String
+     * @var string
      */
     protected $primaryKey = 'id';
 
     /**
      * Updatable or Insertable Columns, not including the who columns
-     * @var Array
+     * @var array
      */
     protected $modifiableColumns = [];
 
     /**
      * Domain Object Class
-     * @var String
+     * @var string
      */
     protected $domainObjectClass = __NAMESPACE__ . '\DomainObject';
 
     /**
-     * Does this table have created_by, created_date, updated_by, and updated_date?
-     * @var Boolean
+     * Does this table have 'created_by', 'created_date', 'updated_by', and 'updated_date' columns?
+     * @var boolean
      */
     protected $who = true;
 
@@ -75,7 +63,7 @@ abstract class DataMapperAbstract
 
     /**
      * Database Connection Object
-     * @var Database Connection Object
+     * @var PDO Connection Object
      */
     private $dbh;
 
@@ -87,43 +75,43 @@ abstract class DataMapperAbstract
 
     /**
      * Session User ID
-     * @var Int
+     * @var mixed
      */
     protected $sessionUserId;
 
     /**
      * Application Object
-     * @var Application Object
+     * @var object
      */
     protected $logger;
 
     /**
      * SQL Statement to Execute
-     * @var String
+     * @var string
      */
     protected $sql;
 
     /**
      * Bind Values
-     * @var Array
+     * @var array
      */
     protected $bindValues = [];
 
     /**
      * Statement Being Executed
-     * @var Prepared Statement Object
+     * @var PDO Statement Object
      */
     protected $statement;
 
     /**
      * Now 'Y-m-d H:i:s'
-     * @var String
+     * @var string
      */
     protected $now;
 
     /**
      * Today 'Y-m-d'
-     * @var String
+     * @var string
      */
     protected $today;
 
@@ -138,7 +126,7 @@ abstract class DataMapperAbstract
      * @param  array  $options      Optional array of setting options
      * @return void
      */
-    public function __construct($dbConnection, array $options = [])
+    public function __construct(PDO $dbConnection, array $options = [])
     {
         if ($dbConnection instanceof PDO) {
             $this->dbh = $dbConnection;
@@ -152,31 +140,33 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Create a new Domain Value Object
+     * Make DomainValue Object
      *
      * Uses the $domainObjectClass defined in the child class
+     * Or defaults to DomainObject
      * @param  void
      * @return DomainObject
      */
-    public function make()
+    public function make(): DomainObject
     {
         return new $this->domainObjectClass;
     }
 
     /**
-     * Find one table row using the primary key ID
+     * Find by ID
      *
+     * Find one table row using the primary key ID
      * @param  int   $id Primary key ID
-     * @return mixed     DomainObject | null
+     * @return DomainObject|null
      */
-    public function findById($id)
+    public function findById(int $id): ?DomainObject
     {
         // Use default select statement and add where clause, unless other SQL has been supplied
         if (empty($this->sql)) {
             $this->makeSelect();
-            $this->sql .= " and {$this->table}.{$this->primaryKey} = ?";
         }
 
+        $this->sql .= " and {$this->table}.{$this->primaryKey} = ?";
         $this->bindValues[] = $id;
 
         return $this->findRow();
@@ -187,9 +177,9 @@ abstract class DataMapperAbstract
      *
      * Use if the SQL is expecting one row
      * @param  void
-     * @return mixed DomainObject | null
+     * @return DomainObject|null
      */
-    public function findRow()
+    public function findRow(): ?DomainObject
     {
         if (!$this->sql) {
             $this->makeSelect();
@@ -197,9 +187,11 @@ abstract class DataMapperAbstract
         }
 
         // Execute the query & return
-        $this->execute();
+        if ($this->execute()) {
+            return $this->statement->fetch();
+        }
 
-        return $this->statement->fetch();
+        return null;
     }
 
     /**
@@ -207,9 +199,9 @@ abstract class DataMapperAbstract
      *
      * Returns all matching table rows.
      * @param  bool  $foundRows Set to true to get foundRows() after query
-     * @return mixed            Array of DomainObject | null
+     * @return array|null
      */
-    public function find(bool $foundRows = false)
+    public function find(bool $foundRows = false): ?array
     {
         // Use default select statement unless other SQL has been supplied
         if (!$this->sql) {
@@ -217,9 +209,11 @@ abstract class DataMapperAbstract
         }
 
         // Execute the query
-        $this->execute();
+        if ($this->execute()) {
+            return $this->statement->fetchAll();
+        }
 
-        return $this->statement->fetchAll();
+        return null;
     }
 
     /**
@@ -243,11 +237,6 @@ abstract class DataMapperAbstract
      */
     public function save(DomainObject $domainObject)
     {
-        // Do not allow multi table saves
-        if ($this->tableJoins) {
-            throw new Exception('PitonORM: Unable to save multi-table DataMappers');
-        }
-
         return $this->coreSave($domainObject);
     }
 
@@ -291,11 +280,11 @@ abstract class DataMapperAbstract
     /**
      * Current Date Time
      *
-     * Returns datetime string in MySQL Format
+     * Returns datetime string in MySQL date time Format
      * @param  void
      * @return string
      */
-    public function now()
+    public function now(): string
     {
         return $this->now;
     }
@@ -303,11 +292,11 @@ abstract class DataMapperAbstract
     /**
      * Current Date
      *
-     * Returns date string in MySQL Format
+     * Returns date string in MySQL date Format
      * @param  void
      * @return string
      */
-    public function today()
+    public function today(): string
     {
         return $this->today;
     }
@@ -323,7 +312,7 @@ abstract class DataMapperAbstract
      * @param  DomainObject $domainObject
      * @return mixed                      DomainObject | null
      */
-    protected function coreSave(DomainObject $domainObject)
+    protected function coreSave(DomainObject $domainObject): ?DomainObject
     {
         if (!empty($domainObject->{$this->primaryKey})) {
             return $this->update($domainObject);
@@ -337,9 +326,9 @@ abstract class DataMapperAbstract
      *
      * Updates a single record using the primarky key ID
      * @param  DomainObject $domainObject
-     * @return mixed                      DomainObject | null
+     * @return DomainObject|null
      */
-    protected function coreUpdate(DomainObject $domainObject)
+    protected function coreUpdate(DomainObject $domainObject): ?DomainObject
     {
         // Make sure a primary key was set
         if (empty($domainObject->{$this->primaryKey})) {
@@ -361,7 +350,7 @@ abstract class DataMapperAbstract
         $this->sql = rtrim($this->sql, ', ');
 
         // Set Who columns
-        if ($this->who) {
+        if ($this->who && $this->sessionUserId) {
             $this->sql .= ', updated_by = ?, updated_date = ? ';
             $this->bindValues[] = $this->sessionUserId;
             $this->bindValues[] = $this->now;
@@ -376,9 +365,11 @@ abstract class DataMapperAbstract
         $this->bindValues[] = $domainObject->{$this->primaryKey};
 
         // Execute
-        $this->execute();
+        if ($this->execute()) {
+            return $domainObject;
+        }
 
-        return $domainObject;
+        return null;
     }
 
     /**
@@ -386,9 +377,9 @@ abstract class DataMapperAbstract
      *
      * @param  DomainObject $domainObject
      * @param  bool         $ignore If true, update on duplicate record
-     * @return mixed        DomainObject | null
+     * @return DomainObject|null
      */
-    protected function coreInsert(DomainObject $domainObject, $ignore = false)
+    protected function coreInsert(DomainObject $domainObject, bool $ignore = false): ?DomainObject
     {
         // Get started
         $this->sql = 'insert ';
@@ -404,7 +395,6 @@ abstract class DataMapperAbstract
                 $this->sql .= $column . ', ';
                 $insertValues .= '?, ';
                 $this->bindValues[] = $domainObject->$column;
-                // $hasBeenSet++;
             }
         }
 
@@ -413,7 +403,7 @@ abstract class DataMapperAbstract
         $insertValues = rtrim($insertValues, ', ');
 
         // Set Who columns
-        if ($this->who) {
+        if ($this->who && $this->sessionUserId) {
             // Append statement
             $this->sql .= ', created_by, created_date, updated_by, updated_date';
             $insertValues .= ', ?, ?, ?, ?';
@@ -435,19 +425,21 @@ abstract class DataMapperAbstract
         $this->sql .= ') values (' . $insertValues . ');';
 
         // Execute and assign last insert ID to primary key and return
-        $this->execute();
-        $domainObject->{$this->primaryKey} = $this->dbh->lastInsertId();
+        if ($this->execute()) {
+            $domainObject->{$this->primaryKey} = $this->dbh->lastInsertId();
+            return $domainObject;
+        }
 
-        return $domainObject;
+        return null;
     }
 
     /**
      * Delete a Record
      *
      * @param  DomainObject $domainObject
-     * @return bool         true | null
+     * @return bool
      */
-    protected function coreDelete(DomainObject $domainObject)
+    protected function coreDelete(DomainObject $domainObject): bool
     {
         // Make sure the ID was set
         if (empty($domainObject->{$this->primaryKey})) {
@@ -466,35 +458,14 @@ abstract class DataMapperAbstract
      * Make Default Select
      *
      * Make select statement
-     * Overrides $this->sql.
-     * If $tableJoins is defined, selects all rows from base table plus joined rows
-     * prefixed with the joined table name.
+     * Overrides and sets $this->sql.
      * @param  bool $foundRows Set to true to get foundRows() after query
      * @return void
      */
     protected function makeSelect(bool $foundRows = false)
     {
-        $this->sql = 'select ';
-        $this->sql .= $foundRows ? 'SQL_CALC_FOUND_ROWS ' : '';
-        $this->sql .= $this->table . '.* ';
-
-        // Add joined tables to select if defined
-        if ($this->tableJoins ) {
-            array_walk($this->tableJoins, function ($join) {
-                $this->sql .= ', ' . $join['select'] . ' ';
-            });
-        }
-
-        $this->sql .= 'from ' . $this->table . ' ';
-
-        // Add joined tables if defined
-        if ($this->tableJoins) {
-            array_walk($this->tableJoins, function ($join) {
-                $this->sql .= $join['join'] . ' ' . $join['table'] . ' on ' . $join['on'] . ' ';
-            });
-        }
-
-        $this->sql .= 'where 1=1 ';
+        $modifier = $foundRows ? 'SQL_CALC_FOUND_ROWS ' : '';
+        $this->sql = "select $modifier {$this->table}.* from {$this->table} where 1=1 ";
     }
 
     /**
@@ -516,11 +487,11 @@ abstract class DataMapperAbstract
      * Execute SQL
      *
      * Executes $this->sql string using $this->bindValues array
-     * Returns true/false for DML, and query result array for selects
+     * Returns true/false
      * @param  void
-     * @return mixed true | null
+     * @return bool
      */
-    protected function execute()
+    protected function execute(): bool
     {
         // Log query and binds
         if ($this->logger) {
@@ -553,8 +524,8 @@ abstract class DataMapperAbstract
                 $this->logger->error('PitonORM: PDO SQL Binds: ' . print_r($this->bindValues, true));
                 $this->logger->error('PitonORM: PDO errorInfo: ' . print_r($this->statement->errorInfo(), true));
             }
-
-            return null;
+            $this->clear();
+            return $outcome;
         }
 
         // If a select statement was executed, set fetch mode
@@ -566,9 +537,7 @@ abstract class DataMapperAbstract
             }
         }
 
-        // Clear last query
         $this->clear();
-
         return $outcome;
     }
 
@@ -581,10 +550,6 @@ abstract class DataMapperAbstract
      */
     private function setConfig(array $options)
     {
-        if (empty($options)) {
-            return;
-        }
-
         if (isset($options['logger'])) {
             if (is_object($options['logger'])) {
                 $this->logger = $options['logger'];
