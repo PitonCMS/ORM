@@ -20,7 +20,7 @@ use Psr\Log\LoggerInterface;
  * Piton Abstract Data Mapper Class
  *
  * All data mapper classes for tables should extend this class.
- * @version 0.3.4
+ * @version 0.3.5
  */
 abstract class DataMapperAbstract
 {
@@ -51,7 +51,7 @@ abstract class DataMapperAbstract
      * Domain Object Class
      * @var string
      */
-    protected $domainObjectClass = __NAMESPACE__ . '\DomainObject';
+    protected $domainObjectClass;
 
     /**
      * Does this table have 'created_by', 'created_date', 'updated_by', and 'updated_date' columns?
@@ -139,6 +139,8 @@ abstract class DataMapperAbstract
         $this->now = date('Y-m-d H:i:s');
         $this->today = date('Y-m-d');
         $this->setConfig($options);
+
+        // If domainObjectClass property was not set in child class,
     }
 
     /**
@@ -563,8 +565,7 @@ abstract class DataMapperAbstract
             $this->sessionUserId = (int) $options['sessionUserId'];
         }
 
-        if (isset($options['defaultDomainObjectClass'])) {
-            $this->domainObjectClass = $options['defaultDomainObjectClass'];
-        }
+        // Set domainObjectClass using 1) Child class property, 2) Runtime provided default, 3) This \DomainObject
+        $this->domainObjectClass = $this->domainObjectClass ?? $options['defaultDomainObjectClass'] ?? __NAMESPACE__ . '\DomainObject';
     }
 }
