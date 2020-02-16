@@ -14,12 +14,13 @@ namespace Piton\ORM;
 
 use PDO;
 use Exception;
+use Psr\Log\LoggerInterface;
 
 /**
  * Piton Abstract Data Mapper Class
  *
  * All data mapper classes for tables should extend this class.
- * @version 0.3.3
+ * @version 0.3.4
  */
 abstract class DataMapperAbstract
 {
@@ -81,8 +82,8 @@ abstract class DataMapperAbstract
     protected $sessionUserId;
 
     /**
-     * Application Object
-     * @var object
+     * PSR 3 Logging Interface
+     * @var Psr\Log\LoggerInterface
      */
     protected $logger;
 
@@ -551,15 +552,19 @@ abstract class DataMapperAbstract
     private function setConfig(array $options)
     {
         if (isset($options['logger'])) {
-            if (is_object($options['logger'])) {
+            if ($options['logger'] instanceof LoggerInterface) {
                 $this->logger = $options['logger'];
             } else {
-                throw new Exception("Option 'logger' must be a logging object");
+                throw new Exception("PitonORM: Option 'logger' must be an instance of Psr\Log\LoggerInterface");
             }
         }
 
         if (isset($options['sessionUserId'])) {
-            $this->sessionUserId = $options['sessionUserId'];
+            $this->sessionUserId = (int) $options['sessionUserId'];
+        }
+
+        if (isset($options['defaultDomainObjectClass'])) {
+            $this->domainObjectClass = $options['defaultDomainObjectClass'];
         }
     }
 }
