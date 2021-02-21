@@ -20,7 +20,7 @@ use Psr\Log\LoggerInterface;
  * Piton Abstract Data Mapper Class
  *
  * All data mapper classes for tables should extend this class.
- * @version 0.3.5
+ * @version 0.3.6
  */
 abstract class DataMapperAbstract
 {
