@@ -354,7 +354,7 @@ abstract class DataMapperAbstract
         $this->sql = rtrim($this->sql, ', ');
 
         // Set Who columns
-        if ($this->who && $this->sessionUserId) {
+        if ($this->who) {
             $this->sql .= ', updated_by = ?, updated_date = ? ';
             $this->bindValues[] = $this->sessionUserId;
             $this->bindValues[] = $this->now;
@@ -407,7 +407,7 @@ abstract class DataMapperAbstract
         $insertValues = rtrim($insertValues, ', ');
 
         // Set Who columns
-        if ($this->who && $this->sessionUserId) {
+        if ($this->who) {
             // Append statement
             $this->sql .= ', created_by, created_date, updated_by, updated_date';
             $insertValues .= ', ?, ?, ?, ?';
