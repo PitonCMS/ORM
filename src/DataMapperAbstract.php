@@ -20,7 +20,7 @@ use Psr\Log\LoggerInterface;
  * Piton Abstract Data Mapper Class
  *
  * All data mapper classes for tables should extend this class.
- * @version 0.3.6
+ * @version 0.3.7
  */
 abstract class DataMapperAbstract
 {
@@ -139,8 +139,6 @@ abstract class DataMapperAbstract
         $this->now = date('Y-m-d H:i:s');
         $this->today = date('Y-m-d');
         $this->setConfig($options);
-
-        // If domainObjectClass property was not set in child class,
     }
 
     /**
@@ -551,7 +549,7 @@ abstract class DataMapperAbstract
      * @param  array $options Array of configuration options
      * @return void
      */
-    private function setConfig(array $options)
+    protected function setConfig(array $options)
     {
         if (isset($options['logger'])) {
             if ($options['logger'] instanceof LoggerInterface) {
