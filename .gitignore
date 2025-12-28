@@ -1,2 +1,5 @@
-# Things to ignore
+# Files
+composer.lock
+
+# Directories
 vendor/

@@ -4,7 +4,7 @@
  * PitonCMS (https://github.com/PitonCMS)
  *
  * @link      https://github.com/PitonCMS/ORM
- * @copyright Copyright (c) 2015 - 2019 Wolfgang Moritz
+ * @copyright Copyright (c) 2015-2026 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
 

@@ -4,7 +4,7 @@
  * PitonCMS (https://github.com/PitonCMS)
  *
  * @link      https://github.com/PitonCMS/ORM
- * @copyright Copyright (c) 2015 - 2019 Wolfgang Moritz
+ * @copyright Copyright (c) 2015-2026 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
 
@@ -12,15 +12,16 @@ declare(strict_types=1);
 
 namespace Piton\ORM;
 
-use PDO;
 use Exception;
+use PDO;
+use PDOStatement;
 use Psr\Log\LoggerInterface;
 
 /**
  * Piton Abstract Data Mapper Class
  *
  * All data mapper classes for tables should extend this class.
- * @version 0.3.7
+ * @version 1.0.0
  */
 abstract class DataMapperAbstract
 {
@@ -32,32 +33,32 @@ abstract class DataMapperAbstract
      * Table Name
      * @var string
      */
-    protected $table;
+    protected string $table;
 
     /**
      * Primary Key Column Name
      * Define if not 'id'
      * @var string
      */
-    protected $primaryKey = 'id';
+    protected string $primaryKey = 'id';
 
     /**
      * Updatable or Insertable Columns, not including the who columns
      * @var array
      */
-    protected $modifiableColumns = [];
+    protected array $modifiableColumns = [];
 
     /**
      * Domain Object Class
      * @var string
      */
-    protected $domainObjectClass;
+    protected string $domainObjectClass = __NAMESPACE__ . '\DomainObject';
 
     /**
      * Does this table have 'created_by', 'created_date', 'updated_by', and 'updated_date' columns?
-     * @var boolean
+     * @var bool
      */
-    protected $who = true;
+    protected bool $who = true;
 
     // ------------------------------------------------------------------------
     // Do not directly set properties below, these are set at runtime
@@ -67,55 +68,55 @@ abstract class DataMapperAbstract
      * Database Connection Object
      * @var PDO Connection Object
      */
-    private $dbh;
+    private PDO $dbh;
 
     /**
      * PDO Fetch Mode
-     * @var PDO Fetch Mode Constant
+     * @var PDO Fetch Mode Constant (int)
      */
-    protected $fetchMode = PDO::FETCH_CLASS;
+    protected int $fetchMode = PDO::FETCH_CLASS;
 
     /**
      * Session User ID
-     * @var mixed
+     * @var int
      */
-    protected $sessionUserId;
+    protected ?int $sessionUserId = null;
 
     /**
      * PSR 3 Logging Interface
      * @var Psr\Log\LoggerInterface
      */
-    protected $logger;
+    protected ?LoggerInterface $logger = null;
 
     /**
      * SQL Statement to Execute
      * @var string
      */
-    protected $sql;
+    protected string $sql = '';
 
     /**
      * Bind Values
      * @var array
      */
-    protected $bindValues = [];
+    protected array $bindValues = [];
 
     /**
      * Statement Being Executed
-     * @var PDO Statement Object
+     * @var PDOStatement Object
      */
-    protected $statement;
+    protected PDOStatement $statement;
 
     /**
      * Now 'Y-m-d H:i:s'
      * @var string
      */
-    protected $now;
+    protected string $now;
 
     /**
      * Today 'Y-m-d'
      * @var string
      */
-    protected $today;
+    protected string $today;
 
     /**
      * Construct
@@ -126,7 +127,6 @@ abstract class DataMapperAbstract
      * - logger: Logging object
      * @param  object $dbConnection Database connection: PDO
      * @param  array  $options      Optional array of setting options
-     * @return void
      */
     public function __construct(PDO $dbConnection, array $options = [])
     {
@@ -151,7 +151,7 @@ abstract class DataMapperAbstract
      */
     public function make(): DomainObject
     {
-        return new $this->domainObjectClass;
+        return new $this->domainObjectClass();
     }
 
     /**
@@ -225,9 +225,9 @@ abstract class DataMapperAbstract
      * @param  void
      * @return int
      */
-    public function foundRows(): ?int
+    public function foundRows(): int
     {
-        return (int) $this->dbh->query('select found_rows()')->fetch(PDO::FETCH_COLUMN) ?: null;
+        return (int) $this->dbh->query('select found_rows()')->fetch(PDO::FETCH_COLUMN) ?: 0;
     }
 
     /**
@@ -429,6 +429,7 @@ abstract class DataMapperAbstract
         // Execute and assign last insert ID to primary key and return
         if ($this->execute()) {
             $domainObject->{$this->primaryKey} = (int) $this->dbh->lastInsertId();
+
             return $domainObject;
         }
 
@@ -479,7 +480,7 @@ abstract class DataMapperAbstract
      */
     protected function clear()
     {
-        $this->sql = null;
+        $this->sql = '';
         $this->bindValues = [];
         $this->fetchMode = PDO::FETCH_CLASS;
     }
@@ -526,6 +527,7 @@ abstract class DataMapperAbstract
                 $this->logger->error('PitonORM: PDO errorInfo: ' . print_r($this->statement->errorInfo(), true));
             }
             $this->clear();
+
             return $outcome;
         }
 
@@ -539,6 +541,7 @@ abstract class DataMapperAbstract
         }
 
         $this->clear();
+
         return $outcome;
     }
 
@@ -564,6 +567,6 @@ abstract class DataMapperAbstract
         }
 
         // Set domainObjectClass using 1) Child class property, 2) Runtime provided default, 3) This \DomainObject
-        $this->domainObjectClass = $this->domainObjectClass ?? $options['defaultDomainObjectClass'] ?? __NAMESPACE__ . '\DomainObject';
+        $this->domainObjectClass = isset($options['defaultDomainObjectClass']) ? $options['defaultDomainObjectClass'] : __NAMESPACE__ . '\DomainObject';
     }
 }
