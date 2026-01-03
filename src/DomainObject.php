@@ -4,7 +4,7 @@
  * PitonCMS (https://github.com/PitonCMS)
  *
  * @link      https://github.com/PitonCMS/ORM
- * @copyright Copyright (c) 2015-2026 Wolfgang Moritz
+ * @copyright Copyright (c) 2015 - 2026 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
 
@@ -18,22 +18,28 @@ namespace Piton\ORM;
  * Base class for all domain value objects
  * Extend this class to include custom property management on __set() or __get().
  */
-class DomainObject
+abstract class DomainObject
 {
     /**
-     * This $id avoids an error when the __get() magic method in DomainObject is called
-     * on a non-existent property
      * @var int
      */
-    public $id;
+    public ?int $id = null;
+
+    /**
+     * Constructor
+     */
+    public function __construct(?array $row)
+    {
+        $this->id = isset($row['id']) ? (int) $row['id'] : null;
+    }
 
     /**
      * Get Object Property
      *
-     * @param  mixed $key Property name to get
-     * @return mixed      Property value | null
+     * @param string $key Property name to get
+     * @return mixed Property value | null
      */
-    public function __get($key)
+    public function __get(string $key)
     {
         return isset($this->$key) ? $this->$key : null;
     }
@@ -42,10 +48,9 @@ class DomainObject
      * Set Object Property
      *
      * @param  string $key   Property key
-     * @param  mixed  $value Property value to set
-     * @return void
+     * @param  mixed|null  $value Property value to set
      */
-    public function __set($key, $value)
+    public function __set(string $key, $value = null)
     {
         $this->$key = $value;
     }

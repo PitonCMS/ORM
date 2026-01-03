@@ -4,7 +4,7 @@
  * PitonCMS (https://github.com/PitonCMS)
  *
  * @link      https://github.com/PitonCMS/ORM
- * @copyright Copyright (c) 2015-2026 Wolfgang Moritz
+ * @copyright Copyright (c) 2015 - 2026 Wolfgang Moritz
  * @license   https://github.com/PitonCMS/ORM/blob/master/LICENSE (MIT License)
  */
 
@@ -49,10 +49,11 @@ abstract class DataMapperAbstract
     protected array $modifiableColumns = [];
 
     /**
-     * Domain Object Class
+     * Domain Value Object Class
+     * Fully qualified and namespaced value object to hydrate with queries
      * @var string
      */
-    protected string $domainObjectClass = __NAMESPACE__ . '\DomainObject';
+    protected string $domainValueObjectClass;
 
     /**
      * Does this table have 'created_by', 'created_date', 'updated_by', and 'updated_date' columns?
@@ -74,7 +75,7 @@ abstract class DataMapperAbstract
      * PDO Fetch Mode
      * @var PDO Fetch Mode Constant (int)
      */
-    protected int $fetchMode = PDO::FETCH_CLASS;
+    protected int $fetchMode = PDO::FETCH_ASSOC;
 
     /**
      * Session User ID
@@ -142,16 +143,16 @@ abstract class DataMapperAbstract
     }
 
     /**
-     * Make DomainValue Object
+     * Make Domain Value Object
      *
-     * Uses the $domainObjectClass defined in the child class
-     * Or defaults to DomainObject
-     * @param  void
+     * Uses the $domainValueObjectClass defined in the child class
+     * Pass in the return associative array
+     * @param  array $row
      * @return DomainObject
      */
-    public function make(): DomainObject
+    public function make(array $row): DomainObject
     {
-        return new $this->domainObjectClass();
+        return new $this->domainValueObjectClass($row);
     }
 
     /**
@@ -190,7 +191,12 @@ abstract class DataMapperAbstract
 
         // Execute the query & return
         if ($this->execute()) {
-            return $this->statement->fetch() ?: null;
+            $row = $this->statement->fetch() ?: null;
+
+            // If a row was returned, hydrate domain value object and return
+            if ($row) {
+                return $this->make($row);
+            }
         }
 
         return null;
@@ -212,7 +218,17 @@ abstract class DataMapperAbstract
 
         // Execute the query
         if ($this->execute()) {
-            return $this->statement->fetchAll() ?: null;
+            $rows = $this->statement->fetchAll() ?: null;
+
+            // Hydrate each row and return as an array of domain value objects
+            if (isset($rows)) {
+                $resultSet = [];
+                foreach ($rows as $key => $value) {
+                    $resultSet[$key] = $this->make($value);
+                }
+
+                return $resultSet;
+            }
         }
 
         return null;
@@ -235,7 +251,7 @@ abstract class DataMapperAbstract
      *
      * Override in child class to add any manipulation before calling parent::coreSave()
      * @param  DomainObject $domainObject
-     * @return DomainObject|null
+     * @return ?DomainObject
      */
     public function save(DomainObject $domainObject): ?DomainObject
     {
@@ -247,7 +263,7 @@ abstract class DataMapperAbstract
      *
      * Override in child class to add any manipulation before calling parent::coreUpdate()
      * @param  DomainObject $domainObject
-     * @return DomainObject|null
+     * @return ?DomainObject
      */
     public function update(DomainObject $domainObject): ?DomainObject
     {
@@ -260,7 +276,7 @@ abstract class DataMapperAbstract
      * Override in child class to add any manipulation before calling parent::coreInsert()
      * @param  DomainObject $domainObject
      * @param  bool         $ignore       If true, update on duplicate record
-     * @return DomainObject|null
+     * @return ?DomainObject
      */
     public function insert(DomainObject $domainObject, bool $ignore = false): ?DomainObject
     {
@@ -328,7 +344,7 @@ abstract class DataMapperAbstract
      *
      * Updates a single record using the primarky key ID
      * @param  DomainObject $domainObject
-     * @return DomainObject|null
+     * @return ?DomainObject
      */
     protected function coreUpdate(DomainObject $domainObject): ?DomainObject
     {
@@ -378,8 +394,8 @@ abstract class DataMapperAbstract
      * Insert a New Record
      *
      * @param  DomainObject $domainObject
-     * @param  bool         $ignore If true, update on duplicate record
-     * @return DomainObject|null
+     * @param  bool         $ignore If set to true, update instead of insert on duplicate record
+     * @return ?DomainObject
      */
     protected function coreInsert(DomainObject $domainObject, bool $ignore = false): ?DomainObject
     {
@@ -474,7 +490,7 @@ abstract class DataMapperAbstract
     /**
      * Clear Prior SQL Statement
      *
-     * Resets $sql, $bindValues, and $fetchMode
+     * Resets $sql and $bindValues for next statement to execute
      * @param  void
      * @return void
      */
@@ -482,7 +498,6 @@ abstract class DataMapperAbstract
     {
         $this->sql = '';
         $this->bindValues = [];
-        $this->fetchMode = PDO::FETCH_CLASS;
     }
 
     /**
@@ -501,8 +516,9 @@ abstract class DataMapperAbstract
             $this->logger->debug('PitonORM: SQL Binds: ' . print_r($this->bindValues, true));
         }
 
-        // Prepare the query
+        // Prepare the SQL statement and set default fetch mode
         $this->statement = $this->dbh->prepare($this->sql);
+        $this->statement->setFetchMode($this->fetchMode);
 
         // Bind values
         foreach ($this->bindValues as $key => $value) {
@@ -531,15 +547,6 @@ abstract class DataMapperAbstract
             return $outcome;
         }
 
-        // If a select statement was executed, set fetch mode
-        if (stristr($this->sql, 'select')) {
-            if ($this->fetchMode === PDO::FETCH_CLASS) {
-                $this->statement->setFetchMode($this->fetchMode, $this->domainObjectClass);
-            } else {
-                $this->statement->setFetchMode($this->fetchMode);
-            }
-        }
-
         $this->clear();
 
         return $outcome;
@@ -565,8 +572,5 @@ abstract class DataMapperAbstract
         if (isset($options['sessionUserId'])) {
             $this->sessionUserId = (int) $options['sessionUserId'];
         }
-
-        // Set domainObjectClass using 1) Child class property, 2) Runtime provided default, 3) This \DomainObject
-        $this->domainObjectClass = isset($options['defaultDomainObjectClass']) ? $options['defaultDomainObjectClass'] : __NAMESPACE__ . '\DomainObject';
     }
 }
