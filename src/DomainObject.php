@@ -36,8 +36,8 @@ abstract class DomainObject
     /**
      * Get Object Property
      *
-     * @param string $key Property name to get
-     * @return mixed Property value | null
+     * @param string $key Property name
+     * @return mixed Property value
      */
     public function __get(string $key)
     {
@@ -47,10 +47,10 @@ abstract class DomainObject
     /**
      * Set Object Property
      *
-     * @param  string $key   Property key
-     * @param  mixed|null  $value Property value to set
+     * @param  string $key   Property name
+     * @param  mixed  $value Property value to set
      */
-    public function __set(string $key, $value = null)
+    public function __set(string $key, mixed $value = null)
     {
         $this->$key = $value;
     }
