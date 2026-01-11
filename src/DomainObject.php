@@ -21,16 +21,31 @@ namespace Piton\ORM;
 abstract class DomainObject
 {
     /**
+     * Track column-properties that have been explicitly set for update/insert, including to null
+     *
+     * @var array
+     */
+    protected array $modifiedProperties = [];
+
+    /**
      * @var int
      */
     public ?int $id = null;
 
     /**
      * Constructor
+     *
+     * If an array of data is provided, the constructor attempts to assign the values to class properties.
+     * This will not by default track modified properties.
+     * @param array $row
      */
-    public function __construct(?array $row)
+    public function __construct(?array $row = null)
     {
-        $this->id = isset($row['id']) ? (int) $row['id'] : null;
+        if ($row) {
+            foreach ($row as $key => $value) {
+                $this->$key = $value;
+            }
+        }
     }
 
     /**
@@ -41,7 +56,7 @@ abstract class DomainObject
      */
     public function __get(string $key)
     {
-        return isset($this->$key) ? $this->$key : null;
+        return $this->$key ?? null;
     }
 
     /**
@@ -53,5 +68,10 @@ abstract class DomainObject
     public function __set(string $key, mixed $value = null)
     {
         $this->$key = $value;
+    }
+
+    public function isPropertyModified(string $key): bool
+    {
+        return isset($this->modifiedProperties[$key]);
     }
 }

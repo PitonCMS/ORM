@@ -147,10 +147,10 @@ abstract class DataMapperAbstract
      *
      * Uses the $domainValueObjectClass defined in the child class
      * Pass in the return associative array
-     * @param  array $row
+     * @param  ?array $row
      * @return DomainObject
      */
-    public function make(array $row): DomainObject
+    public function make(?array $row = null): DomainObject
     {
         return new $this->domainValueObjectClass($row);
     }
@@ -356,9 +356,9 @@ abstract class DataMapperAbstract
         // Build SQL...
         $this->sql = 'update ' . $this->table . ' set ';
 
-        // Use set object properties which match the list of updatable columns
+        // Use set object properties which match the list of updatable columns and has been explicitly set
         foreach ($this->modifiableColumns as $column) {
-            if (property_exists($domainObject, $column)) {
+            if (property_exists($domainObject, $column) && $domainObject->isPropertyModified($column)) {
                 $this->sql .= $column . ' = ?, ';
                 $this->bindValues[] = $domainObject->$column;
             }
@@ -407,9 +407,9 @@ abstract class DataMapperAbstract
         // Insert values placeholder string
         $insertValues = ' ';
 
-        // Use set object properties which match the list of updatable columns
+        // Use set object properties which match the list of updatable columns and has been explicitly set
         foreach ($this->modifiableColumns as $column) {
-            if (property_exists($domainObject, $column)) {
+            if (property_exists($domainObject, $column) && $domainObject->isPropertyModified($column)) {
                 $this->sql .= $column . ', ';
                 $insertValues .= '?, ';
                 $this->bindValues[] = $domainObject->$column;
