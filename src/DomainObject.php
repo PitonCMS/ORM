@@ -12,6 +12,10 @@ declare(strict_types=1);
 
 namespace Piton\ORM;
 
+use ReflectionException;
+use ReflectionProperty;
+use ReflectionUnionType;
+
 /**
  * Piton Domain Value Object
  *
@@ -30,7 +34,7 @@ abstract class DomainObject
     /**
      * @var int
      */
-    public ?int $id = null;
+    protected ?int $id = null;
 
     /**
      * Constructor
@@ -43,6 +47,8 @@ abstract class DomainObject
     {
         if ($row) {
             foreach ($row as $key => $value) {
+                // Cast value to property type
+                $value = $this->castValueToPropertyType($key, $value);
                 $this->$key = $value;
             }
         }
@@ -70,8 +76,53 @@ abstract class DomainObject
         $this->$key = $value;
     }
 
+    /**
+     * Confirms if Property is Explicitly Modified
+     *
+     * Used in DataMapperAbstract to valid if property should be used for update/insert
+     * @param string $key
+     * @return bool
+     */
     public function isPropertyModified(string $key): bool
     {
         return isset($this->modifiedProperties[$key]);
+    }
+
+    /**
+     * Cast Value to Property Type
+     *
+     * Avoids casting errors when assigning values to typed properties
+     * @param string $propertyKey
+     * @param mixed $value
+     * @return mixed
+     */
+    protected function castValueToPropertyType(string $propertyKey, mixed $value): mixed
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        // Use reflection to get the property type
+        try {
+            $reflection = new ReflectionProperty($this, $propertyKey);
+            $type = $reflection->getType();
+
+            if ($type && !$type instanceof ReflectionUnionType) {
+                $typeName = $type->getName();
+
+                return match($typeName) {
+                    'int' => (int) $value,
+                    'float' => (float) $value,
+                    'string' => (string) $value,
+                    'bool' => (bool) $value,
+                    default => $value
+                };
+            }
+        } catch (ReflectionException $e) {
+            // Property doesn't exist, return as-is
+            return $value;
+        }
+
+        return $value;
     }
 }
