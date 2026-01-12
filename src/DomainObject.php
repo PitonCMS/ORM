@@ -89,6 +89,18 @@ abstract class DomainObject
     }
 
     /**
+     * Set Property as Modified
+     *
+     * Flags property for update
+     * @param string $key
+     * @return void
+     */
+    public function setPropertyAsModified(string $key): void
+    {
+        $this->modifiedProperties[$key] = true;
+    }
+
+    /**
      * Cast Value to Property Type
      *
      * Avoids casting errors when assigning values to typed properties
