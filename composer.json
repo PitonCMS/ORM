@@ -18,5 +18,10 @@
         "psr-4": {
             "Piton\\ORM\\": "src"
         }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-develop": "1.x-dev"
+        }
     }
 }
